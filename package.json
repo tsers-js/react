@@ -22,7 +22,7 @@
     "mocha": "mocha --compilers js:babel-register -s 500",
     "dist": "npm run build && npm run minify",
     "build": "mkdir -p dist && rm -f dist/* && babel src/index.js > dist/tsers.react.js",
-    "minify": "uglify -s dist/tsers.react.js -o dist/tsers.react.min.js"
+    "minify": "uglifyjs -c -m -- dist/tsers.react.js > dist/tsers.react.min.js"
   },
   "dependencies": {
     "react": "^0.14.7",
@@ -42,6 +42,6 @@
     "mocha": "^2.4.5",
     "rx": "^4.1.0",
     "should": "^8.2.2",
-    "uglify": "^0.1.5"
+    "uglify-js": "^2.6.2"
   }
 }
