@@ -21,7 +21,7 @@
     "mocha:all": "npm run mocha -- --recursive test",
     "mocha": "mocha --compilers js:babel-register -s 500",
     "dist": "npm run build && npm run minify",
-    "build": "mkdir -p dist && rm dist/* && babel src/index.js > dist/tsers.react.js",
+    "build": "mkdir -p dist && rm -f dist/* && babel src/index.js > dist/tsers.react.js",
     "minify": "uglify -s dist/tsers.react.js -o dist/tsers.react.min.js"
   },
   "peerDependencies": {
