@@ -24,6 +24,10 @@
     "build": "mkdir -p dist && rm -f dist/* && babel src/index.js > dist/tsers.react.js",
     "minify": "uglify -s dist/tsers.react.js -o dist/tsers.react.min.js"
   },
+  "dependencies": {
+    "react": "^0.14.7",
+    "react-dom": "^0.14.7"
+  },
   "peerDependencies": {
     "rx": "4.x"
   },
@@ -36,8 +40,6 @@
     "babel-register": "^6.6.5",
     "eslint": "2.2.0",
     "mocha": "^2.4.5",
-    "react": "^0.14.7",
-    "react-dom": "^0.14.7",
     "rx": "^4.1.0",
     "should": "^8.2.2",
     "uglify": "^0.1.5"
