@@ -25,8 +25,10 @@
     "minify": "uglifyjs -c -m -- dist/tsers.react.js > dist/tsers.react.min.js"
   },
   "dependencies": {
+    "matches-selector": "^1.0.0",
     "react": "^0.14.7",
-    "react-dom": "^0.14.7"
+    "react-dom": "^0.14.7",
+    "react-hyperscript": "^2.2.2"
   },
   "peerDependencies": {
     "rx": "4.x"
