@@ -13,21 +13,29 @@ const zipObj = pairs => {
 
 const extend = Object.assign
 
-const matches = (ev, sel) =>
-!sel || (ev.target && selmatch(ev.target, sel))
+const matches = (ev, sel) => !sel || (ev.target && selmatch(ev.target, sel))
+
+const shallowEq = (a, b) => {
+  const aKeys = Object.keys(a), bKeys = Object.keys(b)
+  if (aKeys.length !== bKeys.length) return false
+  for (let i = 0; i < aKeys.length; i++) {
+    if (a[aKeys[i]] !== b[aKeys[i]]) return false
+  }
+  return true
+}
 
 const reactEvents =
-  "onCopy onCut onPaste onKeyDown onKeyPress onKeyUp onFocus onBlur onChange onInput onSubmit" +
-  "onClick onContextMenu onDoubleClick onDrag onDragEnd onDragEnter onDragExit" +
-  "onDragLeave onDragOver onDragStart onDrop onMouseDown onMouseEnter onMouseLeave" +
-  "onMouseMove onMouseOut onMouseOver onMouseUp onTouchCancel onTouchEnd onTouchMove onTouchStart" +
-  "onAbort onCanPlay onCanPlayThrough onDurationChange onEmptied onEncrypted onEnded" +
-  "onError onLoadedData onLoadedMetadata onLoadStart onPause onPlay onPlaying onProgress" +
-  "onRateChange onSeeked onSeeking onStalled onSuspend onTimeUpdate onVolumeChange onWaiting" +
+  "onCopy onCut onPaste onKeyDown onKeyPress onKeyUp onFocus onBlur onChange onInput onSubmit " +
+  "onClick onContextMenu onDoubleClick onDrag onDragEnd onDragEnter onDragExit " +
+  "onDragLeave onDragOver onDragStart onDrop onMouseDown onMouseEnter onMouseLeave " +
+  "onMouseMove onMouseOut onMouseOver onMouseUp onTouchCancel onTouchEnd onTouchMove onTouchStart " +
+  "onAbort onCanPlay onCanPlayThrough onDurationChange onEmptied onEncrypted onEnded " +
+  "onError onLoadedData onLoadedMetadata onLoadStart onPause onPlay onPlaying onProgress " +
+  "onRateChange onSeeked onSeeking onStalled onSuspend onTimeUpdate onVolumeChange onWaiting " +
   "onSelect onScroll onWheel onLoad onError"
 
 const eventsByName =
-  zipObj(reactEvents.split(" ").map(e => [e, e.replace(/^on/, "").toLowerCase()]))
+  zipObj(reactEvents.split(" ").map(e => [e.replace(/^on/, "").toLowerCase(), e]))
 
 function Delegate() {
   this.listeners = []
@@ -57,11 +65,12 @@ extend(Events.prototype, {
     if (idx >= 0) this.elems.splice(idx, 1)
   },
   listen(selector, eventName) {
-    const newOfKind = this.delegates[eventName]
-    const d = newOfKind || (this.delegates[eventName] = new Delegate())
-    if (newOfKind) this.elems.forEach(el => el.refresh())
+    const old = this.delegates[eventName]
+    const d = old || (this.delegates[eventName] = new Delegate())
+    const isNew = !!old
     return O.create(o => {
       d.add(o, selector)
+      if (isNew) this.elems.forEach(el => el.refresh())
       return () => {
         const stillActive = d.rm(o)
         if (!stillActive) {
@@ -82,16 +91,23 @@ const EventWrapper = React.createClass({
     return { props: this.props.ev.props() }
   },
   shouldComponentUpdate(nextProps, nextState) {
-    return nextProps !== this.props || nextState !== this.state
+    return !nextProps !== this.props || nextState !== this.state
+  },
+  componentWillReceiveProps(nextProps) {
+    this.setState({props: nextProps.ev.props()})
   },
   componentDidMount() {
     this.props.ev.mount(this)
+    this.refresh()
   },
   componentWillUnmount() {
     this.props.ev.unmount(this)
   },
   refresh() {
-    this.setState({props: this.props.ev.props()})
+    const nextProps = this.props.ev.props()
+    if (!shallowEq(nextProps, this.state.props)) {
+      this.setState({props: nextProps})
+    }
   },
   render() {
     return React.cloneElement(this.props.children, this.state.props)
