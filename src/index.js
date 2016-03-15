@@ -175,6 +175,8 @@ function makeReactDOMDriver(rootElem) {
       withEvents
     }
 
+    const signal$ = O.empty()
+
     function executor(vdom$) {
       const $root = typeof rootElem === "string" ? document.querySelector(rootElem) : rootElem
       return vdom$.subscribe(vdom => {
@@ -182,7 +184,7 @@ function makeReactDOMDriver(rootElem) {
       })
     }
 
-    return {Transducers, executor}
+    return [Transducers, signal$, executor]
   }
 }
 
