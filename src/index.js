@@ -147,7 +147,7 @@ const Prepared = React.createClass({
 
 function makeReactDOMDriver(rootElem) {
   return function ReactDOMDriver() {
-    function withEvents(vdom$) {
+    function prepare(vdom$) {
       return vdom$
         .map(vdom => vdom.type === Prepared ? vdom
           : React.createElement(Prepared, {events: new EventSource()}, vdom))
@@ -158,8 +158,8 @@ function makeReactDOMDriver(rootElem) {
       return vdom$.merge(O.never()).flatMap(vdom => {
         if (vdom.type !== Prepared) {
           console.warn(                                 // eslint-disable-line
-            "DOM.events :: incompatible VDOM type.",
-            "Perhaps you forgot to call DOM.withEvents() first?"
+            "DOM.events :: VDOM is not prepared for event listening.",
+            "Perhaps you forgot to call DOM.prepare(vdom$)?"
           )
           return O.empty()
         } else {
@@ -172,7 +172,7 @@ function makeReactDOMDriver(rootElem) {
       React,
       h,
       events,
-      withEvents
+      prepare
     }
 
     const signal$ = O.empty()
