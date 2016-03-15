@@ -85,7 +85,7 @@ extend(EventSource.prototype, {
   mount(elem) {
     if (this.elems.indexOf(elem) === -1) {
       this.elems.push(elem)
-      if (this.proxies.length > 0) {
+      if (keys(this.proxies).length > 0) {
         this.refreshListeners([elem])
       }
     }
