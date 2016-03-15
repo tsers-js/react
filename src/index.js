@@ -113,7 +113,7 @@ extend(EventSource.prototype, {
       completed: () => o && o.onCompleted()
     })
     const isNew = !(eventName in this.proxies)
-    const proxy = isNew ? this.proxies[eventName] : (this.proxies[eventName] = new MulticastProxy())
+    const proxy = isNew ? (this.proxies[eventName] = new MulticastProxy()) : this.proxies[eventName]
     return O.create(o => {
       const obs = observer(o)
       proxy.add(obs)
