@@ -11,17 +11,27 @@ const zipObj = pairs => {
   return o
 }
 
+const keys = x => x ? Object.keys(x) : []
+
+const values = obj => keys(obj).map(k => obj[k])
+
 const extend = Object.assign
 
 const matches = (ev, sel) => !sel || (ev.target && selmatch(ev.target, sel))
 
 const shallowEq = (a, b) => {
-  const aKeys = Object.keys(a), bKeys = Object.keys(b)
+  const aKeys = keys(a), bKeys = keys(b)
   if (aKeys.length !== bKeys.length) return false
   for (let i = 0; i < aKeys.length; i++) {
     if (a[aKeys[i]] !== b[aKeys[i]]) return false
   }
   return true
+}
+
+const rm = (arr, obj) => {
+  const idx = arr.indexOf(obj)
+  if (idx !== -1) arr.splice(idx, 1)
+  return arr.length
 }
 
 const reactEvents =
@@ -37,80 +47,100 @@ const reactEvents =
 const eventsByName =
   zipObj(reactEvents.split(" ").map(e => [e.replace(/^on/, "").toLowerCase(), e]))
 
-function Delegate() {
-  this.listeners = []
-  this.handler = ev => this.listeners.forEach(l => matches(ev, l.sel) && l.obs.onNext(ev))
+/*
+ * Mutable multicasting proxy object that allows (de)registering
+ * observers and broadcasting 'next' and 'completed' events to them
+ */
+function MulticastProxy() {
+  this.obs = []
+  this.next = this.next.bind(this)
+  this.dispose = this.dispose.bind(this)
 }
-extend(Delegate.prototype, {
-  add(obs, sel) {
-    this.listeners.push({obs, sel})
+extend(MulticastProxy.prototype, {
+  add(obs) {
+    this.obs.push(obs)
   },
   rm(obs) {
-    const idx = this.listeners.findIndex(l => l.obs === obs)
-    if (idx !== -1) this.listeners.splice(idx, 1)
-    return this.listeners.length > 0
+    return rm(this.obs, obs) === 0
+  },
+  next(ev) {
+    this.obs.forEach(o => o.next(ev))
+  },
+  dispose() {
+    this.obs.forEach(o => o.completed())
+    this.obs = []
   }
 })
 
-function Events() {
+/*
+ * Event source that listens to React element lifecycle methods and
+ * allows subscribing to element's events, managing the event listener
+ * attachment/detachment under the hood.
+ */
+function EventSource() {
   this.elems = []
-  this.delegates = {}
+  this.proxies = {}
 }
-extend(Events.prototype, {
+extend(EventSource.prototype, {
   mount(elem) {
-    this.elems.push(elem)
+    if (this.elems.indexOf(elem) === -1) {
+      this.elems.push(elem)
+      if (this.proxies.length > 0) {
+        this.refreshListeners([elem])
+      }
+    }
   },
   unmount(elem) {
-    const idx = this.elems.indexOf(elem)
-    if (idx >= 0) this.elems.splice(idx, 1)
+    if (rm(this.elems, elem) === 0) {
+      const p = this.proxies
+      this.proxies = []
+      values(p).forEach(proxy => proxy.dispose())
+    }
   },
-  listen(selector, eventName) {
-    const old = this.delegates[eventName]
-    const d = old || (this.delegates[eventName] = new Delegate())
-    const isNew = !!old
-    return O.create(o => {
-      d.add(o, selector)
-      if (isNew) this.elems.forEach(el => el.refresh())
-      return () => {
-        const stillActive = d.rm(o)
-        if (!stillActive) {
-          delete this.delegates[eventName]
-          this.elems.forEach(el => el.refresh())
-        }
+  refreshListeners(elems) {
+    elems = elems || this.elems
+    const p = this.proxies
+    const listeners = zipObj(keys(p).map(k => [eventsByName[k] || k, p[k].next]))
+    elems.forEach(elem => {
+      if (!elem.state || !shallowEq(elem.state.listeners, listeners)) {
+        elem.setState({listeners})
       }
     })
   },
-  props() {
-    return zipObj(Object.keys(this.delegates).map(k =>
-      [eventsByName[k] || k, this.delegates[k].handler]))
+  subscribe(selector, eventName) {
+    const observer = o => ({
+      next: ev => matches(ev, selector) && o ? o.onNext(ev) : null,
+      completed: () => o && o.onCompleted()
+    })
+    const isNew = !(eventName in this.proxies)
+    const proxy = isNew ? this.proxies[eventName] : (this.proxies[eventName] = new MulticastProxy())
+    return O.create(o => {
+      const obs = observer(o)
+      proxy.add(obs)
+      if (isNew) {
+        this.refreshListeners()
+      }
+      return () => proxy.rm(obs) && delete this.proxies[eventName]
+    })
   }
 })
 
-const EventWrapper = React.createClass({
-  getInitialState() {
-    return { props: this.props.ev.props() }
-  },
-  shouldComponentUpdate(nextProps, nextState) {
-    return !nextProps !== this.props || nextState !== this.state
+const Prepared = React.createClass({
+  componentDidMount() {
+    this.props.events.mount(this)
   },
   componentWillReceiveProps(nextProps) {
-    this.setState({props: nextProps.ev.props()})
-  },
-  componentDidMount() {
-    this.props.ev.mount(this)
-    this.refresh()
-  },
-  componentWillUnmount() {
-    this.props.ev.unmount(this)
-  },
-  refresh() {
-    const nextProps = this.props.ev.props()
-    if (!shallowEq(nextProps, this.state.props)) {
-      this.setState({props: nextProps})
+    if (nextProps.events !== this.props.events) {
+      this.props.events.unmount(this)
+      nextProps.events.mount(this)
     }
   },
+  componentWillUnmount() {
+    this.props.events.unmount(this)
+  },
   render() {
-    return React.cloneElement(this.props.children, this.state.props)
+    return !this.state ? this.props.children
+      : React.cloneElement(this.props.children, this.state.listeners)
   }
 })
 
@@ -119,22 +149,26 @@ function makeReactDOMDriver(rootElem) {
   return function ReactDOMDriver() {
     function withEvents(vdom$) {
       return vdom$
-        .map(vdom => vdom.type === EventWrapper ? vdom : React.createElement(EventWrapper, {ev: new Events()}, vdom))
+        .map(vdom => vdom.type === Prepared ? vdom
+          : React.createElement(Prepared, {events: new EventSource()}, vdom))
         .shareReplay(1)
     }
 
     function events(vdom$, selector, eventName) {
-      return vdom$.flatMapLatest(vdom => {
-        if (vdom.type !== EventWrapper) {
-          console.warn("DOM.events :: incompatible VDOM type. Perhaps you forgot to call DOM.withEvents() first?") // eslint-disable-line
-          return O.never()
+      return vdom$.merge(O.never()).flatMap(vdom => {
+        if (vdom.type !== Prepared) {
+          console.warn(                                 // eslint-disable-line
+            "DOM.events :: incompatible VDOM type.",
+            "Perhaps you forgot to call DOM.withEvents() first?"
+          )
+          return O.empty()
         } else {
-          return vdom.props.ev.listen(selector, eventName)
+          return vdom.props.events.subscribe(selector, eventName)
         }
       })
     }
 
-    const transducers = {
+    const Transducers = {
       React,
       h,
       events,
@@ -148,7 +182,7 @@ function makeReactDOMDriver(rootElem) {
       })
     }
 
-    return { transducers, executor }
+    return {Transducers, executor}
   }
 }
 
@@ -156,9 +190,9 @@ export default makeReactDOMDriver
 
 // for testing package
 export const __resources = {
-  Delegate,
-  Events,
-  EventWrapper,
+  MulticastProxy,
+  EventSource,
+  Prepared,
   eventsByName,
   matches
 }
