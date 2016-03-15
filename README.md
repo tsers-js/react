@@ -51,6 +51,12 @@ const { run } = Transducers
 execute(run(signals, main(Transducers)))
 ``` 
 
+## Installation
+
+```
+npm i --save @tsers/react
+``` 
+
 ## API reference
 
 ### Driver creation
