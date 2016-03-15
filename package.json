@@ -2,7 +2,7 @@
   "name": "@tsers/react",
   "version": "0.4.0",
   "private": false,
-  "description": "tsers",
+  "description": "TSERSful React DOM driver",
   "main": "dist/tsers.react.js",
   "author": "Matti Lankinen <m.lankinen@iki.fi> (https://github.com/milankinen)",
   "license": "MIT",
@@ -12,7 +12,9 @@
   },
   "keywords": [
     "rxjs",
-    "tsers"
+    "reactive",
+    "tsers",
+    "driver"
   ],
   "scripts": {
     "prepublish": "npm test && npm run dist",
