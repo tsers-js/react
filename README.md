@@ -51,23 +51,25 @@ const { run } = Transducers
 execute(run(signals, main(Transducers)))
 ``` 
 
-## Installation
+## Usage
+
+### Installation
 
 ```
 npm i --save @tsers/react
 ``` 
 
-## API reference
+### Using the driver
 
-### Driver creation
+`@tsers/react` returns a factory function which can be used to create the actual
+React DOM driver. Factory function takes one mandatory parameter: `rootElement` 
+which defines the root element for the rendered application. 
 
-In order to create a React DOM driver, you must give the root element for
-the rendered application. The given root element must be one of the following:
+The given root element must be one of the following:
 
 * DOM Node
 * Query selector (string)
 
-Example:
 ```javascript
 import TSERS from "@tsers/core"
 import makeReactDOM from "@tsers/react"
@@ -78,6 +80,8 @@ const [T, S, E] = TSERS({
 })
 ...
 ```
+
+## API reference
 
 ### Input signals
 
