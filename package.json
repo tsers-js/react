@@ -1,6 +1,6 @@
 {
   "name": "@tsers/react",
-  "version": "0.5.1",
+  "version": "1.0.0",
   "private": false,
   "description": "TSERSful React DOM interpreter",
   "main": "dist/tsers.react.js",
