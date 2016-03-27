@@ -145,8 +145,8 @@ const Prepared = React.createClass({
 })
 
 
-function makeReactDOMDriver(rootElem) {
-  return function ReactDOMDriver() {
+export default function makeReactDOM(rootElem) {
+  return function ReactDOM() {
     function prepare(vdom$) {
       return vdom$
         .map(vdom => vdom.type === Prepared ? vdom
@@ -168,14 +168,12 @@ function makeReactDOMDriver(rootElem) {
       })
     }
 
-    const Transducers = {
+    const Transforms = {
       React,
       h,
       events,
       prepare
     }
-
-    const signal$ = O.empty()
 
     function executor(vdom$) {
       const $root = typeof rootElem === "string" ? document.querySelector(rootElem) : rootElem
@@ -184,11 +182,9 @@ function makeReactDOMDriver(rootElem) {
       })
     }
 
-    return [Transducers, signal$, executor]
+    return [Transforms, executor]
   }
 }
-
-export default makeReactDOMDriver
 
 // for testing package
 export const __resources = {
