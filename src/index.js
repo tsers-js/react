@@ -44,8 +44,16 @@ const reactEvents =
   "onRateChange onSeeked onSeeking onStalled onSuspend onTimeUpdate onVolumeChange onWaiting " +
   "onSelect onScroll onWheel onLoad onError"
 
+const nativeEventMapping = {
+  dblclick: "onDoubleClick"
+}
+
 const eventsByName =
   zipObj(reactEvents.split(" ").map(e => [e.replace(/^on/, "").toLowerCase(), e]))
+
+const reactEventName = eventName => {
+  return eventsByName[eventName] || nativeEventMapping[eventName] || eventName
+}
 
 /*
  * Mutable multicasting proxy object that allows (de)registering
@@ -100,7 +108,7 @@ extend(EventSource.prototype, {
   refreshListeners(elems) {
     elems = elems || this.elems
     const p = this.proxies
-    const listeners = zipObj(keys(p).map(k => [eventsByName[k] || k, p[k].next]))
+    const listeners = zipObj(keys(p).map(k => [reactEventName(k), p[k].next]))
     elems.forEach(elem => {
       if (!elem.state || !shallowEq(elem.state.listeners, listeners)) {
         elem.setState({listeners})
