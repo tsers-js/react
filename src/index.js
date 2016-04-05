@@ -193,12 +193,3 @@ export default function makeReactDOM(rootElem) {
     return [Transforms, executor]
   }
 }
-
-// for testing package
-export const __resources = {
-  MulticastProxy,
-  EventSource,
-  Prepared,
-  eventsByName,
-  matches
-}
