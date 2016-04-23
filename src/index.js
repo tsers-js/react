@@ -23,11 +23,11 @@ const boundaryMakerAttr = "data-scope-boundary";
 
 const isScopeBoundary = (el) => el.hasAttribute && el.hasAttribute(boundaryMakerAttr);
 
-const belongsToScope = (velems, ev) => {
-  const elems = velems.map(DOM.findDOMNode);
+const belongsToScope = (ev) => {
+  const scopeRoot = ev.currentTarget;
   let currentEl = ev.target;
   while(currentEl) {
-    if (elems.indexOf(currentEl) > -1) {
+    if (currentEl === scopeRoot) {
       return true;
     } else if (isScopeBoundary(currentEl)) {
       return false;
@@ -138,7 +138,7 @@ extend(EventSource.prototype, {
     const observer = o => ({
       next: ev => {
         if (o && matches(ev, selector) && 
-          belongsToScope(this.elems, ev)) {
+          belongsToScope(ev)) {
           o.onNext(ev)
         } else {
           return null;
