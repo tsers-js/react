@@ -19,6 +19,25 @@ const extend = Object.assign
 
 const matches = (ev, sel) => !sel || (ev.target && selmatch(ev.target, sel))
 
+const boundaryMakerAttr = "data-scope-boundary"
+
+const isScopeBoundary = (el) => el.hasAttribute && el.hasAttribute(boundaryMakerAttr)
+
+const belongsToScope = (ev) => {
+  const scopeRoot = ev.currentTarget
+  let currentEl = ev.target
+  while(currentEl) {
+    if (currentEl === scopeRoot) {
+      return true
+    } else if (isScopeBoundary(currentEl)) {
+      return false
+    }
+    currentEl = currentEl.parentNode
+  }
+
+  return false
+}
+
 const shallowEq = (a, b) => {
   const aKeys = keys(a), bKeys = keys(b)
   if (aKeys.length !== bKeys.length) return false
@@ -117,7 +136,14 @@ extend(EventSource.prototype, {
   },
   subscribe(selector, eventName) {
     const observer = o => ({
-      next: ev => matches(ev, selector) && o ? o.onNext(ev) : null,
+      next: ev => {
+        if (o && matches(ev, selector) && 
+          belongsToScope(ev)) {
+          o.onNext(ev)
+        } else {
+          return null
+        }
+      },
       completed: () => o && o.onCompleted()
     })
     const isNew = !(eventName in this.proxies)
@@ -147,8 +173,11 @@ const Prepared = React.createClass({
     this.props.events.unmount(this)
   },
   render() {
-    return !this.state ? this.props.children
-      : React.cloneElement(this.props.children, this.state.listeners)
+    const children = this.props.children
+    const bondaryMarker = {[boundaryMakerAttr]: true}
+    return !this.state ? 
+      React.cloneElement(children, bondaryMarker) :
+      React.cloneElement(children, {...this.state.listeners, ...bondaryMarker})
   }
 })
 
