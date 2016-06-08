@@ -202,7 +202,7 @@ export default function makeReactDOM(rootElem) {
         } else {
           return vdom.props.events.subscribe(selector, eventName)
         }
-      })
+      }).share()
     }
 
     const Transforms = {
